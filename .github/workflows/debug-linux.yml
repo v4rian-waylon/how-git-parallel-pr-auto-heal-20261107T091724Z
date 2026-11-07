@@ -1,0 +1,16 @@
+name: debug-linux
+on:
+  push:
+    branches: [debug-linux]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: probe guard
+        run: |
+          set -x
+          W=$(mktemp -d -t agent-hooks-test.XXXXXX); W=$(cd "$W" && pwd -P); echo "W=$W TMPDIR=${TMPDIR:-unset}"
+          git init -q "$W/real/other" && git -C "$W/real/other" -c user.email=a@b -c user.name=a commit -q --allow-empty -m i && git -C "$W/real/other" branch foo
+          G=.io.v4rian.how-git/agent-hooks/shared/guard-destructive.sh
+          jq -nc --arg c "git -C $W/real/other branch -D foo" --arg d "$W" '{tool_input:{command:$c},cwd:$d}' | bash -x "$G" 2>&1 | grep -nE 'gdir|seg=|g=|deny|xpath|^\+\+* (dir|cwd)=' | head -60
